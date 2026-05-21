@@ -374,6 +374,8 @@ async function addEvent(shift){
     body:JSON.stringify({summary:shift.title,start:{dateTime:s,timeZone:"Asia/Jerusalem"},end:{dateTime:e,timeZone:"Asia/Jerusalem"},colorId:"7"})
   });
   if(!r.ok) throw new Error(await r.text());
+  const d=await r.json();
+  return d.id||null;
 }
 
 async function getEvents(date){
@@ -433,7 +435,29 @@ function showTyping(){
 function hideTyping(){document.getElementById("typ")?.remove();}
 
 // ── Send ──
-let sending=false;
+let sending=false, lastAction=null;
+
+function showUndo(){
+  document.getElementById("undo-btn")?.remove();
+  const btn=document.createElement("button");
+  btn.id="undo-btn";
+  btn.textContent="↩ בטל פעולה אחרונה";
+  btn.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);color:#ff6b6b;font-family:'Space Mono',monospace;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer;z-index:99;white-space:nowrap;backdrop-filter:blur(8px);transition:opacity .2s;";
+  btn.onclick=undoLast;
+  document.body.appendChild(btn);
+  setTimeout(()=>{btn.style.opacity="0";setTimeout(()=>btn.remove(),300);},8000);
+}
+
+async function undoLast(){
+  document.getElementById("undo-btn")?.remove();
+  if(!lastAction||!lastAction.ids.length){addMsg("assistant","אין פעולה לביטול.");return;}
+  const ids=[...lastAction.ids]; lastAction=null;
+  let ok=0,fail=0;
+  for(const id of ids){
+    try{await delEvent(id);ok++;}catch{fail++;}
+  }
+  addMsg("assistant",`↩ בוטלו ${ok} אירועים מהיומן.${fail>0?" ("+fail+" נכשלו)":""}`);
+}
 async function send(){
   const inp=document.getElementById("inp"), text=inp.value.trim();
   if(!text||sending) return;
@@ -443,7 +467,7 @@ async function send(){
   try{
     const shifts=parseShifts(text);
     if(!shifts.length){hideTyping();addMsg("assistant","לא זיהיתי משמרות. ודא שהפורמט כולל כוכביות *...*");return;}
-    const type=detectType(shifts), results=[];
+    const type=detectType(shifts), results=[], addedIds=[];
     for(const s of shifts){
       try{
         if(type==="exec"){
@@ -454,16 +478,22 @@ async function send(){
             const es=ev.start?.dateTime?new Date(ev.start.dateTime):null; if(!es) continue;
             if(Math.abs(es.getHours()*60+es.getMinutes()-orig)<=120){await delEvent(ev.id);upd++;}
           }
-          await addEvent(s); results.push({...s,status:upd>0?"upd":"ok"});
+          const newId=await addEvent(s);
+          if(newId) addedIds.push(newId);
+          results.push({...s,status:upd>0?"upd":"ok"});
         } else {
-          await addEvent(s); results.push({...s,status:"ok"});
+          const newId=await addEvent(s);
+          if(newId) addedIds.push(newId);
+          results.push({...s,status:"ok"});
         }
       } catch(e){results.push({...s,status:"err"});}
     }
     hideTyping();
     const upd=results.filter(r=>r.status==="upd").length, ok=results.filter(r=>r.status==="ok").length;
     const parts=[]; if(upd>0)parts.push(`עדכנתי ${upd}`); if(ok>0)parts.push(`הוספתי ${ok}`);
+    lastAction={ids:addedIds, type};
     addMsg("assistant",(parts.join(", ")||"הושלם")+" ביומן ✓",results,type);
+    showUndo();
   } catch(e){hideTyping();addMsg("assistant","שגיאה: "+e.message);}
   finally{sending=false;document.getElementById("sendBtn").disabled=false;}
 }

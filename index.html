@@ -437,15 +437,19 @@ function hideTyping(){document.getElementById("typ")?.remove();}
 // ── Send ──
 let sending=false, lastAction=null;
 
-function showUndo(){
+function addUndoBtn(){
   document.getElementById("undo-btn")?.remove();
   const btn=document.createElement("button");
   btn.id="undo-btn";
   btn.textContent="↩ בטל פעולה אחרונה";
-  btn.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);color:#ff6b6b;font-family:'Space Mono',monospace;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer;z-index:99;white-space:nowrap;backdrop-filter:blur(8px);transition:opacity .2s;";
+  btn.style.cssText="margin-top:6px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.35);color:#ff6b6b;font-family:'Space Mono',monospace;font-size:11px;padding:6px 14px;border-radius:20px;cursor:pointer;display:block;transition:all .2s;";
+  btn.onmouseover=()=>btn.style.background="rgba(255,107,107,.25)";
+  btn.onmouseout=()=>btn.style.background="rgba(255,107,107,.12)";
   btn.onclick=undoLast;
-  document.body.appendChild(btn);
-  setTimeout(()=>{btn.style.opacity="0";setTimeout(()=>btn.remove(),300);},8000);
+  // Add to last assistant message
+  const msgs=document.getElementById("msgs");
+  const lastBc=msgs.querySelectorAll(".bbl:not(.u) .bc");
+  if(lastBc.length) lastBc[lastBc.length-1].appendChild(btn);
 }
 
 async function undoLast(){
@@ -493,7 +497,7 @@ async function send(){
     const parts=[]; if(upd>0)parts.push(`עדכנתי ${upd}`); if(ok>0)parts.push(`הוספתי ${ok}`);
     lastAction={ids:addedIds, type};
     addMsg("assistant",(parts.join(", ")||"הושלם")+" ביומן ✓",results,type);
-    showUndo();
+    if(addedIds.length>0) addUndoBtn();
   } catch(e){hideTyping();addMsg("assistant","שגיאה: "+e.message);}
   finally{sending=false;document.getElementById("sendBtn").disabled=false;}
 }

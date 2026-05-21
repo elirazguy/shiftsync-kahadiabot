@@ -442,14 +442,19 @@ function addUndoBtn(){
   const btn=document.createElement("button");
   btn.id="undo-btn";
   btn.textContent="↩ בטל פעולה אחרונה";
-  btn.style.cssText="margin-top:6px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.35);color:#ff6b6b;font-family:'Space Mono',monospace;font-size:11px;padding:6px 14px;border-radius:20px;cursor:pointer;display:block;transition:all .2s;";
+  btn.style.cssText="background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.35);color:#ff6b6b;font-family:'Space Mono',monospace;font-size:11px;padding:6px 14px;border-radius:20px;cursor:pointer;display:inline-block;transition:all .2s;margin-bottom:2px;";
   btn.onmouseover=()=>btn.style.background="rgba(255,107,107,.25)";
   btn.onmouseout=()=>btn.style.background="rgba(255,107,107,.12)";
   btn.onclick=undoLast;
-  // Add to last assistant message
+  // Insert before shift cards (.sc-wrap) in last assistant message
   const msgs=document.getElementById("msgs");
   const lastBc=msgs.querySelectorAll(".bbl:not(.u) .bc");
-  if(lastBc.length) lastBc[lastBc.length-1].appendChild(btn);
+  if(lastBc.length){
+    const bc=lastBc[lastBc.length-1];
+    const scWrap=bc.querySelector(".sc-wrap");
+    if(scWrap) bc.insertBefore(btn,scWrap);
+    else bc.appendChild(btn);
+  }
 }
 
 async function undoLast(){

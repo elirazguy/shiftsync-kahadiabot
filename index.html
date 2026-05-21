@@ -98,18 +98,17 @@
   </div>
 </main>
 <script>
-const CLIENT_ID     = "710776319176-osg4gjeldsjb2n8e52o46p3h112778a2.apps.googleusercontent.com";
+const CLIENT_ID = "710776319176-osg4gjeldsjb2n8e52o46p3h112778a2.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
 const REDIRECT_URI  = "https://elirazguy.github.io/shiftsync-kahadiabot/";
-const SCOPE         = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly";
-
+const SCOPE = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly";
 const SHIFT_KEYWORDS = ["משמרת","מוקד","כוננות","מאמן","קרקעית","מנהל","מפעיל","מפקד","טיול","מז\"ג","מזג","לילה","בוקר"];
 
 let accessToken = null;
 let tokenExpiry = 0;
 let refreshToken = localStorage.getItem("shiftsync_refresh") || null;
 
-// ── OAuth ──────────────────────────────────────────────
+// ── OAuth — Popup flow ─────────────────────────────────
 function connectGoogle() {
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", CLIENT_ID);
@@ -118,7 +117,29 @@ function connectGoogle() {
   url.searchParams.set("scope", SCOPE);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
-  window.location.href = url.toString();
+
+  const w = 500, h = 650;
+  const left = window.screenX + (window.outerWidth - w) / 2;
+  const top  = window.screenY + (window.outerHeight - h) / 2;
+  const popup = window.open(url.toString(), "google-auth",
+    `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`);
+
+  // Poll for redirect back
+  const timer = setInterval(async () => {
+    try {
+      if (!popup || popup.closed) { clearInterval(timer); return; }
+      const popupUrl = popup.location.href;
+      if (popupUrl.startsWith(REDIRECT_URI)) {
+        clearInterval(timer);
+        const code = new URL(popupUrl).searchParams.get("code");
+        popup.close();
+        if (code) {
+          document.getElementById("authBtn").textContent = "מתחבר...";
+          await exchangeCode(code);
+        }
+      }
+    } catch(e) { /* cross-origin — popup still on google */ }
+  }, 300);
 }
 
 async function exchangeCode(code) {
@@ -127,6 +148,7 @@ async function exchangeCode(code) {
     body: new URLSearchParams({code, client_id:CLIENT_ID, client_secret:CLIENT_SECRET, redirect_uri:REDIRECT_URI, grant_type:"authorization_code"})
   });
   const d = await r.json();
+  if (!d.access_token) throw new Error(d.error_description || "שגיאת חיבור");
   if (d.refresh_token) { refreshToken = d.refresh_token; localStorage.setItem("shiftsync_refresh", refreshToken); }
   accessToken = d.access_token;
   tokenExpiry = Date.now() + d.expires_in * 1000;
@@ -151,16 +173,21 @@ function setConnected() {
   document.getElementById("authBtn").textContent = "✓ Google מחובר";
   document.getElementById("authBtn").className = "gbtn ok";
   document.getElementById("sendBtn").disabled = false;
-  window.history.replaceState({}, "", window.location.pathname);
 }
 
 window.addEventListener("load", async () => {
+  // Handle redirect-based callback (fallback for mobile)
   const params = new URLSearchParams(window.location.search);
   const code = params.get("code");
   if (code) {
+    window.history.replaceState({}, "", window.location.pathname);
     try { await exchangeCode(code); } catch(e) { alert("שגיאת חיבור: " + e.message); }
-  } else if (refreshToken) {
-    try { await getToken(); setConnected(); } catch(e) { refreshToken = null; localStorage.removeItem("shiftsync_refresh"); }
+    return;
+  }
+  // Auto-reconnect with saved refresh token
+  if (refreshToken) {
+    try { await getToken(); setConnected(); }
+    catch(e) { refreshToken = null; localStorage.removeItem("shiftsync_refresh"); }
   }
 });
 

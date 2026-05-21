@@ -470,14 +470,27 @@ async function undoLast(){
   for(const ev of (deleted||[])){
     try{
       const t=await getToken();
-      await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{
-        method:"POST",headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},
-        body:JSON.stringify(ev)
+      // Build clean event object for restore
+      const restoreEvent = {
+        summary: ev.summary,
+        colorId: ev.colorId||"7",
+        start: ev.start.dateTime
+          ? {dateTime: ev.start.dateTime, timeZone: ev.start.timeZone||"Asia/Jerusalem"}
+          : {date: ev.start.date},
+        end: ev.end.dateTime
+          ? {dateTime: ev.end.dateTime, timeZone: ev.end.timeZone||"Asia/Jerusalem"}
+          : {date: ev.end.date},
+      };
+      const r=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{
+        method:"POST",
+        headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},
+        body:JSON.stringify(restoreEvent)
       });
-    }catch(e){fail++;}
+      if(!r.ok){const e=await r.text();console.error("restore failed:",e);fail++;}
+    }catch(e){console.error("restore error:",e);fail++;}
   }
   const msg = deleted?.length>0
-    ? `↩ בוטלה הפעולה — המשמרת הקודמת שוחזרה ביומן.`
+    ? "↩ בוטלה הפעולה — המשמרת הקודמת שוחזרה ביומן."
     : `↩ בוטלו ${ok} אירועים מהיומן.`;
   addMsg("assistant", msg + (fail>0?` (${fail} נכשלו)`:""));
 }

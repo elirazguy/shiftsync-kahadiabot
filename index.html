@@ -166,10 +166,15 @@ window.addEventListener("load", async () => {
 
 // ── Parse shifts ───────────────────────────────────────
 function parseBriefingTime(text) {
-  // "תדריך 45 דק לפני" / "תדריך שעה לפני" / "תדריך רצ"ת שעה לפני" / "תדריך 45 דקות לפני"
-  const minMatch = text.match(/תדריך[^0-9]*(\d+)\s*דק/);
+  // Handles: "תדריך 45 דק לפני", "תדריך שעה לפני", "תדריך רצ"ת שעה לפני", "תדריך 45 דקות לפני"
+  // Look for "תדריך" anywhere in the block
+  if (!text.includes("תדריך")) return 0;
+  // Minutes: "45 דק" / "45 דקות"
+  const minMatch = text.match(/(\d+)\s*דק/);
   if (minMatch) return parseInt(minMatch[1]);
-  if (text.includes("תדריך") && text.includes("שעה")) return 60;
+  // Hours: "שעה" = 60 min, "שעתיים" = 120 min
+  if (text.includes("שעתיים")) return 120;
+  if (text.includes("שעה")) return 60;
   return 0;
 }
 

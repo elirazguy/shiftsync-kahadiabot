@@ -459,13 +459,27 @@ function addUndoBtn(){
 
 async function undoLast(){
   document.getElementById("undo-btn")?.remove();
-  if(!lastAction||!lastAction.ids.length){addMsg("assistant","אין פעולה לביטול.");return;}
-  const ids=[...lastAction.ids]; lastAction=null;
-  let ok=0,fail=0;
+  if(!lastAction){addMsg("assistant","אין פעולה לביטול.");return;}
+  const {ids, deleted} = lastAction; lastAction=null;
+  let ok=0, fail=0;
+  // Delete newly added events
   for(const id of ids){
     try{await delEvent(id);ok++;}catch{fail++;}
   }
-  addMsg("assistant",`↩ בוטלו ${ok} אירועים מהיומן.${fail>0?" ("+fail+" נכשלו)":""}`);
+  // Restore previously deleted events
+  for(const ev of (deleted||[])){
+    try{
+      const t=await getToken();
+      await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{
+        method:"POST",headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},
+        body:JSON.stringify(ev)
+      });
+    }catch(e){fail++;}
+  }
+  const msg = deleted?.length>0
+    ? `↩ בוטלה הפעולה — המשמרת הקודמת שוחזרה ביומן.`
+    : `↩ בוטלו ${ok} אירועים מהיומן.`;
+  addMsg("assistant", msg + (fail>0?` (${fail} נכשלו)`:""));
 }
 async function send(){
   const inp=document.getElementById("inp"), text=inp.value.trim();
@@ -476,7 +490,7 @@ async function send(){
   try{
     const shifts=parseShifts(text);
     if(!shifts.length){hideTyping();addMsg("assistant","לא זיהיתי משמרות. ודא שהפורמט כולל כוכביות *...*");return;}
-    const type=detectType(shifts), results=[], addedIds=[];
+    const type=detectType(shifts), results=[], addedIds=[], deletedEvents=[];
     for(const s of shifts){
       try{
         if(type==="exec"){
@@ -485,7 +499,10 @@ async function send(){
           for(const ev of evs){
             if(!SHIFT_KEYWORDS.some(k=>ev.summary?.includes(k))) continue;
             const es=ev.start?.dateTime?new Date(ev.start.dateTime):null; if(!es) continue;
-            if(Math.abs(es.getHours()*60+es.getMinutes()-orig)<=120){await delEvent(ev.id);upd++;}
+            if(Math.abs(es.getHours()*60+es.getMinutes()-orig)<=120){
+              deletedEvents.push({summary:ev.summary,start:ev.start,end:ev.end,colorId:ev.colorId||"7"});
+              await delEvent(ev.id);upd++;
+            }
           }
           const newId=await addEvent(s);
           if(newId) addedIds.push(newId);
@@ -500,7 +517,7 @@ async function send(){
     hideTyping();
     const upd=results.filter(r=>r.status==="upd").length, ok=results.filter(r=>r.status==="ok").length;
     const parts=[]; if(upd>0)parts.push(`עדכנתי ${upd}`); if(ok>0)parts.push(`הוספתי ${ok}`);
-    lastAction={ids:addedIds, type};
+    lastAction={ids:addedIds, deleted:deletedEvents, type};
     addMsg("assistant",(parts.join(", ")||"הושלם")+" ביומן ✓",results,type);
     if(addedIds.length>0) addUndoBtn();
   } catch(e){hideTyping();addMsg("assistant","שגיאה: "+e.message);}

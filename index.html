@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ShiftSync</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -11,104 +11,254 @@
     --accent:#7c6bff; --accent2:#ff6b9d; --text:#eeeeff; --muted:#7070a0;
     --ok:#4fffb0; --err:#ff6b6b; --warn:#ffb84f;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;display:flex;flex-direction:column}
-  header{padding:18px 22px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:14px}
-  .logo-ic{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
-  .logo-tx h1{font-size:20px;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .logo-tx p{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace}
-  .auth-zone{margin-right:auto}
-  .gbtn{padding:8px 15px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s}
-  .gbtn:hover{border-color:var(--accent);color:var(--accent)}
-  .gbtn.ok{border-color:rgba(79,255,176,.5);color:var(--ok);cursor:default}
-  main{flex:1;display:flex;flex-direction:column;max-width:800px;width:100%;margin:0 auto;padding:20px 20px 0;gap:16px}
-  #msgs{flex:1;display:flex;flex-direction:column;gap:12px;min-height:300px;max-height:calc(100vh - 260px);overflow-y:auto;padding-bottom:8px}
-  #msgs::-webkit-scrollbar{width:3px}
-  #msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;opacity:.4;padding:60px 0}
-  .empty-ic{font-size:44px}
-  .empty p{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);text-align:center;line-height:1.7}
-  .bbl{display:flex;gap:9px;animation:su .25s ease}
-  @keyframes su{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .bbl.u{flex-direction:row-reverse}
-  .av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--s2);border:1px solid var(--border)}
-  .bbl.u .av{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none}
-  .bc{max-width:82%;display:flex;flex-direction:column;gap:5px}
-  .bbl.u .bc{align-items:flex-end}
-  .bt{background:var(--s2);border:1px solid var(--border);border-radius:13px 13px 13px 3px;padding:10px 14px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;color:var(--text)}
-  .bbl.u .bt{background:rgba(124,107,255,.3);border-color:rgba(124,107,255,.5);border-radius:13px 13px 3px 13px;color:#fff}
-  .btm{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);padding:0 3px}
-  .msg-type{font-size:10px;font-family:'Space Mono',monospace;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:4px}
-  .msg-type.plan{background:rgba(124,107,255,.15);color:var(--accent)}
-  .msg-type.exec{background:rgba(255,184,79,.15);color:var(--warn)}
-  .sc-wrap{display:flex;flex-direction:column;gap:6px;margin-top:5px}
-  .sc{background:#1a1a2e;border:1px solid var(--border);border-radius:9px;padding:8px 12px;display:flex;align-items:center;gap:9px;font-size:12.5px}
-  .sc.ok{border-color:rgba(79,255,176,.35)}
-  .sc.err{border-color:rgba(255,107,107,.35)}
-  .sc.upd{border-color:rgba(255,184,79,.35)}
-  .sc.pre{border-color:rgba(124,107,255,.3)}
-  .sd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-  .sc.ok .sd{background:var(--ok)}
-  .sc.err .sd{background:var(--err)}
-  .sc.upd .sd{background:var(--warn)}
-  .sc.pre .sd{background:var(--accent)}
-  .si{flex:1}
-  .si strong{display:block;font-weight:700;color:#f0f0ff}
-  .si span{color:#a0a0c0;font-family:'Space Mono',monospace;font-size:10.5px;direction:ltr;display:block;text-align:right}
-  .ss{font-size:10.5px;font-family:'Space Mono',monospace;padding:2px 7px;border-radius:20px;white-space:nowrap}
-  .sc.ok .ss{background:rgba(79,255,176,.1);color:var(--ok)}
-  .sc.err .ss{background:rgba(255,107,107,.1);color:var(--err)}
-  .sc.upd .ss{background:rgba(255,184,79,.1);color:var(--warn)}
-  .sc.pre .ss{background:rgba(124,107,255,.1);color:var(--accent)}
-  .typing{display:flex;gap:4px;align-items:center;padding:10px 14px}
-  .typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:b .9s infinite}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  /* ── Header ── */
+  header {
+    flex-shrink: 0;
+    padding: 14px 0 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .logo {
+    width: 42px; height: 42px; flex-shrink: 0;
+    position: relative;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo svg { width: 26px; height: 26px; }
+
+  .logo-tx h1 {
+    font-size: 19px; font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+  .logo-tx p { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 2px; }
+
+  .auth-zone { margin-right: auto; }
+  .gbtn {
+    padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--s2); color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: all .2s; white-space: nowrap;
+  }
+  .gbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .gbtn.ok { border-color: rgba(79,255,176,.5); color: var(--ok); cursor: default; }
+
+  /* ── Messages ── */
+  #msgs {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 0 8px;
+    overscroll-behavior: contain;
+  }
+  #msgs::-webkit-scrollbar { width: 3px; }
+  #msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; opacity: .4; padding: 40px 0;
+  }
+  .empty svg { width: 56px; height: 56px; opacity: .6; }
+  .empty p { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.8; }
+
+  .bbl { display: flex; gap: 9px; animation: su .2s ease; }
+  @keyframes su { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .bbl.u { flex-direction: row-reverse; }
+
+  .av {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    background: var(--s2); border: 1px solid var(--border);
+  }
+  .bbl.u .av { background: linear-gradient(135deg,var(--accent),var(--accent2)); border: none; }
+
+  .bc { max-width: 83%; display: flex; flex-direction: column; gap: 4px; }
+  .bbl.u .bc { align-items: flex-end; }
+
+  .bt {
+    background: var(--s2); border: 1px solid var(--border);
+    border-radius: 13px 13px 13px 3px;
+    padding: 10px 14px; font-size: 13.5px; line-height: 1.6;
+    white-space: pre-wrap; color: var(--text);
+  }
+  .bbl.u .bt {
+    background: rgba(124,107,255,.28); border-color: rgba(124,107,255,.45);
+    border-radius: 13px 13px 3px 13px; color: #fff;
+  }
+  .btm { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); padding: 0 3px; }
+
+  .msg-type {
+    font-size: 10px; font-family: 'Space Mono', monospace;
+    padding: 2px 8px; border-radius: 20px; display: inline-block; margin-bottom: 3px;
+  }
+  .msg-type.plan { background: rgba(124,107,255,.15); color: var(--accent); }
+  .msg-type.exec { background: rgba(255,184,79,.15); color: var(--warn); }
+
+  /* Shift cards */
+  .sc-wrap { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+  .sc {
+    background: #1a1a2e; border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 11px;
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+  }
+  .sc.ok  { border-color: rgba(79,255,176,.35); }
+  .sc.err { border-color: rgba(255,107,107,.35); }
+  .sc.upd { border-color: rgba(255,184,79,.35); }
+  .sc.pre { border-color: rgba(124,107,255,.3); }
+  .sd { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .sc.ok  .sd { background: var(--ok); }
+  .sc.err .sd { background: var(--err); }
+  .sc.upd .sd { background: var(--warn); }
+  .sc.pre .sd { background: var(--accent); }
+  .si { flex: 1; min-width: 0; }
+  .si strong { display: block; font-weight: 700; color: #f0f0ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .si span { color: #a0a0c0; font-family: 'Space Mono', monospace; font-size: 10px; direction: ltr; display: block; text-align: right; }
+  .ss { font-size: 10px; font-family: 'Space Mono', monospace; padding: 2px 7px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .sc.ok  .ss { background: rgba(79,255,176,.1);  color: var(--ok); }
+  .sc.err .ss { background: rgba(255,107,107,.1); color: var(--err); }
+  .sc.upd .ss { background: rgba(255,184,79,.1);  color: var(--warn); }
+  .sc.pre .ss { background: rgba(124,107,255,.1); color: var(--accent); }
+
+  /* Typing */
+  .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: b .9s infinite; }
   .typing span:nth-child(2){animation-delay:.15s}
   .typing span:nth-child(3){animation-delay:.3s}
   @keyframes b{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
-  .ia{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:11px 13px;display:flex;gap:9px;align-items:flex-end;transition:border-color .2s;margin-bottom:20px}
-  .ia:focus-within{border-color:rgba(124,107,255,.5)}
-  textarea{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Syne',sans-serif;font-size:13.5px;line-height:1.55;resize:none;max-height:160px;min-height:22px}
-  textarea::placeholder{color:var(--muted)}
-  .sbtn{width:36px;height:36px;flex-shrink:0;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,transform .15s}
-  .sbtn:hover{opacity:.85;transform:scale(1.06)}
-  .sbtn:disabled{opacity:.28;cursor:not-allowed;transform:none}
+
+  /* ── Input ── */
+  .input-wrap {
+    flex-shrink: 0;
+    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+  }
+  .ia {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 10px 12px;
+    display: flex; gap: 8px; align-items: flex-end;
+    transition: border-color .2s;
+  }
+  .ia:focus-within { border-color: rgba(124,107,255,.5); }
+  textarea {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-family: 'Syne', sans-serif;
+    font-size: 14px; line-height: 1.5; resize: none;
+    max-height: 120px; min-height: 22px;
+  }
+  textarea::placeholder { color: var(--muted); }
+  .sbtn {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 9px; border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .2s, transform .1s;
+  }
+  .sbtn:hover { opacity: .85; transform: scale(1.05); }
+  .sbtn:disabled { opacity: .28; cursor: not-allowed; transform: none; }
+
+  @media (max-width: 480px) {
+    .logo-tx h1 { font-size: 17px; }
+    .bt { font-size: 13px; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="logo-ic">📅</div>
-  <div class="logo-tx"><h1>ShiftSync</h1><p>ניהול משמרות חכם</p></div>
-  <div class="auth-zone">
-    <button class="gbtn" id="authBtn" onclick="connectGoogle()">🔗 התחבר ל-Google</button>
-  </div>
-</header>
-<main>
+<div class="app">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Calendar base -->
+        <rect x="3" y="4" width="18" height="17" rx="2.5" fill="white" fill-opacity="0.15" stroke="white" stroke-width="1.5"/>
+        <rect x="3" y="4" width="18" height="6" rx="2.5" fill="white" fill-opacity="0.3"/>
+        <!-- Calendar rings -->
+        <line x1="8" y1="2" x2="8" y2="6" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="16" y1="2" x2="16" y2="6" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        <!-- Automation arrow circle -->
+        <circle cx="15.5" cy="15.5" r="4" fill="none" stroke="white" stroke-width="1.4"/>
+        <path d="M15.5 12.5 L15.5 15.5 L17.5 15.5" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Small dot marker -->
+        <circle cx="7.5" cy="14" r="1" fill="white" fill-opacity="0.7"/>
+        <circle cx="7.5" cy="17.5" r="1" fill="white" fill-opacity="0.7"/>
+      </svg>
+    </div>
+    <div class="logo-tx">
+      <h1>ShiftSync</h1>
+      <p>ניהול משמרות חכם</p>
+    </div>
+    <div class="auth-zone">
+      <button class="gbtn" id="authBtn" onclick="connectGoogle()">🔗 התחבר ל-Google</button>
+    </div>
+  </header>
+
   <div id="msgs">
     <div class="empty">
-      <div class="empty-ic">🌙</div>
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="4" width="18" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="3" y="4" width="18" height="6" rx="2.5" fill="currentColor" fill-opacity="0.2"/>
+        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="15.5" cy="15.5" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M15.5 12.5 L15.5 15.5 L17.5 15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="7.5" cy="14" r="1" fill="currentColor" fill-opacity="0.7"/>
+        <circle cx="7.5" cy="17.5" r="1" fill="currentColor" fill-opacity="0.7"/>
+      </svg>
       <p>התחבר ל-Google ואז<br>הדבק הודעת שיבוץ או ביצוע</p>
     </div>
   </div>
-  <div class="ia">
-    <textarea id="inp" rows="2"
-      placeholder="הדבק הודעת תכנון או ביצוע..."
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"
-      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,160)+'px'"></textarea>
-    <button class="sbtn" id="sendBtn" onclick="send()" disabled>↑</button>
+
+  <div class="input-wrap">
+    <div class="ia">
+      <textarea id="inp" rows="1"
+        placeholder="הדבק הודעת שיבוץ כאן..."
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"
+        oninput="autoResize(this)"></textarea>
+      <button class="sbtn" id="sendBtn" onclick="send()" disabled>↑</button>
+    </div>
   </div>
-</main>
+</div>
+
 <script>
-const CLIENT_ID = "710776319176-osg4gjeldsjb2n8e52o46p3h112778a2.apps.googleusercontent.com";
+const CLIENT_ID     = "710776319176-osg4gjeldsjb2n8e52o46p3h112778a2.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
 const REDIRECT_URI  = "https://elirazguy.github.io/shiftsync-kahadiabot/";
 const SCOPE = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly";
-const SHIFT_KEYWORDS = ["משמרת","מוקד","כוננות","מאמן","קרקעית","מנהל","מפעיל","מפקד","טיול","מז\"ג","מזג","לילה","בוקר"];
+const SHIFT_KEYWORDS = ["משמרת","מוקד","כוננות","מאמן","קרקעית","מנהל","מפעיל","מפקד","טיול","מזג","לילה","בוקר"];
 
-let accessToken = null;
-let tokenExpiry = 0;
+let accessToken = null, tokenExpiry = 0;
 let refreshToken = localStorage.getItem("shiftsync_refresh") || null;
 
-// ── OAuth — Popup flow ─────────────────────────────────
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 120) + "px";
+}
+
+// ── OAuth ──
 function connectGoogle() {
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", CLIENT_ID);
@@ -117,408 +267,205 @@ function connectGoogle() {
   url.searchParams.set("scope", SCOPE);
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
-
-  const w = 500, h = 650;
-  const left = window.screenX + (window.outerWidth - w) / 2;
-  const top  = window.screenY + (window.outerHeight - h) / 2;
-  const popup = window.open(url.toString(), "google-auth",
-    `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`);
-
-  // Poll for redirect back
-  const timer = setInterval(async () => {
+  const w=500,h=650,left=window.screenX+(window.outerWidth-w)/2,top=window.screenY+(window.outerHeight-h)/2;
+  const popup = window.open(url.toString(),"google-auth",`width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+  const timer = setInterval(async()=>{
     try {
-      if (!popup || popup.closed) { clearInterval(timer); return; }
-      const popupUrl = popup.location.href;
-      if (popupUrl.startsWith(REDIRECT_URI)) {
+      if(!popup||popup.closed){clearInterval(timer);return;}
+      const pu=popup.location.href;
+      if(pu.startsWith(REDIRECT_URI)){
         clearInterval(timer);
-        const code = new URL(popupUrl).searchParams.get("code");
+        const code=new URL(pu).searchParams.get("code");
         popup.close();
-        if (code) {
-          document.getElementById("authBtn").textContent = "מתחבר...";
-          await exchangeCode(code);
-        }
+        if(code){ document.getElementById("authBtn").textContent="מתחבר..."; await exchangeCode(code); }
       }
-    } catch(e) { /* cross-origin — popup still on google */ }
-  }, 300);
+    } catch(e){}
+  },300);
 }
 
-async function exchangeCode(code) {
-  const r = await fetch("https://oauth2.googleapis.com/token", {
-    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body: new URLSearchParams({code, client_id:CLIENT_ID, client_secret:CLIENT_SECRET, redirect_uri:REDIRECT_URI, grant_type:"authorization_code"})
+async function exchangeCode(code){
+  const r=await fetch("https://oauth2.googleapis.com/token",{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({code,client_id:CLIENT_ID,client_secret:CLIENT_SECRET,redirect_uri:REDIRECT_URI,grant_type:"authorization_code"})
   });
-  const d = await r.json();
-  if (!d.access_token) throw new Error(d.error_description || "שגיאת חיבור");
-  if (d.refresh_token) { refreshToken = d.refresh_token; localStorage.setItem("shiftsync_refresh", refreshToken); }
-  accessToken = d.access_token;
-  tokenExpiry = Date.now() + d.expires_in * 1000;
+  const d=await r.json();
+  if(!d.access_token) throw new Error(d.error_description||"שגיאת חיבור");
+  if(d.refresh_token){refreshToken=d.refresh_token;localStorage.setItem("shiftsync_refresh",refreshToken);}
+  accessToken=d.access_token; tokenExpiry=Date.now()+d.expires_in*1000;
   setConnected();
 }
 
-async function getToken() {
-  if (accessToken && Date.now() < tokenExpiry - 60000) return accessToken;
-  if (!refreshToken) throw new Error("לא מחובר");
-  const r = await fetch("https://oauth2.googleapis.com/token", {
-    method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body: new URLSearchParams({client_id:CLIENT_ID, client_secret:CLIENT_SECRET, refresh_token:refreshToken, grant_type:"refresh_token"})
+async function getToken(){
+  if(accessToken&&Date.now()<tokenExpiry-60000) return accessToken;
+  if(!refreshToken) throw new Error("לא מחובר");
+  const r=await fetch("https://oauth2.googleapis.com/token",{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:refreshToken,grant_type:"refresh_token"})
   });
-  const d = await r.json();
-  if (!d.access_token) throw new Error("שגיאת חיבור");
-  accessToken = d.access_token;
-  tokenExpiry = Date.now() + d.expires_in * 1000;
+  const d=await r.json();
+  if(!d.access_token) throw new Error("שגיאת חיבור");
+  accessToken=d.access_token; tokenExpiry=Date.now()+d.expires_in*1000;
   return accessToken;
 }
 
-function setConnected() {
-  document.getElementById("authBtn").textContent = "✓ Google מחובר";
-  document.getElementById("authBtn").className = "gbtn ok";
-  document.getElementById("sendBtn").disabled = false;
-  // Show token banner for WhatsApp bot users
-  if (refreshToken && !sessionStorage.getItem("token_shown")) {
-    sessionStorage.setItem("token_shown", "1");
-    showTokenBanner(refreshToken);
-  }
+function setConnected(){
+  document.getElementById("authBtn").textContent="✓ Google מחובר";
+  document.getElementById("authBtn").className="gbtn ok";
+  document.getElementById("sendBtn").disabled=false;
 }
 
-function showTokenBanner(token) {
-  const existing = document.getElementById("token-banner");
-  if (existing) existing.remove();
-  const banner = document.createElement("div");
-  banner.id = "token-banner";
-  banner.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
-    "background:#1a1a2e;border:1px solid rgba(124,107,255,.5);" +
-    "border-radius:14px;padding:16px 20px;max-width:480px;width:90%;" +
-    "z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.5);" +
-    "font-family:'Space Mono',monospace;direction:rtl;";
-  const shortToken = token.slice(0,40) + "...";
-  banner.innerHTML = [
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">',
-    '<span style="font-weight:700;color:#eeeeff;font-family:Syne,sans-serif">📱 רוצה להשתמש גם בוואטסאפ?</span>',
-    '<button onclick="document.getElementById('token-banner').remove()" style="background:none;border:none;color:#7070a0;cursor:pointer;font-size:18px">✕</button>',
-    '</div>',
-    '<p style="color:#a0a0c0;font-size:11px;line-height:1.7;margin-bottom:10px">שלח את הקוד הזה לבוט בוואטסאפ כדי לחבר את חשבון Google שלך:</p>',
-    '<div style="background:#080810;border-radius:8px;padding:10px;display:flex;align-items:center;gap:8px;margin-bottom:10px">',
-    '<span style="color:#7c6bff;font-size:10px;flex:1;word-break:break-all;direction:ltr">' + shortToken + '</span>',
-    '<button id="copy-token-btn" style="background:rgba(124,107,255,.2);border:1px solid rgba(124,107,255,.4);color:#7c6bff;border-radius:6px;padding:4px 10px;cursor:pointer;font-family:Space Mono,monospace;font-size:11px;white-space:nowrap">העתק</button>',
-    '</div>',
-    '<p style="color:#7070a0;font-size:10px">שלח את הקוד המלא לבוט פעם אחת — מאותו רגע הכל אוטומטי.</p>'
-  ].join("");
-  // Store token for copy button
-  banner._fullToken = token;
-  document.body.appendChild(banner);
-  document.getElementById("copy-token-btn").addEventListener("click", function() {
-    navigator.clipboard.writeText(banner._fullToken);
-    this.textContent = "✓ הועתק";
-    setTimeout(() => { this.textContent = "העתק"; }, 2000);
-  });
-}
-
-window.addEventListener("load", async () => {
-  // Handle redirect-based callback (fallback for mobile)
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
-  if (code) {
-    window.history.replaceState({}, "", window.location.pathname);
-    try { await exchangeCode(code); } catch(e) { alert("שגיאת חיבור: " + e.message); }
+window.addEventListener("load",async()=>{
+  const params=new URLSearchParams(window.location.search);
+  const code=params.get("code");
+  if(code){
+    window.history.replaceState({},"",window.location.pathname);
+    try{await exchangeCode(code);}catch(e){alert("שגיאת חיבור: "+e.message);}
     return;
   }
-  // Auto-reconnect with saved refresh token
-  if (refreshToken) {
-    try { await getToken(); setConnected(); }
-    catch(e) { refreshToken = null; localStorage.removeItem("shiftsync_refresh"); }
+  if(refreshToken){
+    try{await getToken();setConnected();}
+    catch(e){refreshToken=null;localStorage.removeItem("shiftsync_refresh");}
   }
 });
 
-// ── Parse shifts ───────────────────────────────────────
-function parseBriefingTime(text) {
-  // Handles: "תדריך 45 דק לפני", "תדריך שעה לפני", "תדריך רצ"ת שעה לפני", "תדריך 45 דקות לפני"
-  // Look for "תדריך" anywhere in the block
-  if (!text.includes("תדריך")) return 0;
-  // Minutes: "45 דק" / "45 דקות"
-  const minMatch = text.match(/(\d+)\s*דק/);
-  if (minMatch) return parseInt(minMatch[1]);
-  // Hours: "שעה" = 60 min, "שעתיים" = 120 min
-  if (text.includes("שעתיים")) return 120;
-  if (text.includes("שעה")) return 60;
+// ── Parse ──
+function parseBriefingTime(text){
+  if(!text.includes("תדריך")) return 0;
+  const m=text.match(/(\d+)\s*דק/); if(m) return parseInt(m[1]);
+  if(text.includes("שעתיים")) return 120;
+  if(text.includes("שעה")) return 60;
   return 0;
 }
 
-function parseShifts(text) {
-  const year = new Date().getFullYear();
-  const shifts = [];
-  const blocks = text.split(/\*/);
-
-  for (let i = 1; i < blocks.length; i += 2) {
-    const line = blocks[i].trim();
-    const roleBlock = (blocks[i+1] || "").trim();
-
-    const startDateM = line.match(/(\d{2})\.(\d{2})/);
-    const startTimeM = line.match(/נתחיל ב(\d{1,2}:\d{2})/);
-    const endTimeM   = line.match(/נסיים ב(\d{1,2}:\d{2})/);
-    const endDateM   = line.match(/נסיים ב\d{1,2}:\d{2}[^\d]*(\d{2})\.(\d{2})/);
-    if (!startDateM || !startTimeM || !endTimeM) continue;
-
-    const startDate = `${year}-${startDateM[2].padStart(2,"0")}-${startDateM[1].padStart(2,"0")}`;
-    let startTime   = startTimeM[1].padStart(5,"0");
-    const endTime   = endTimeM[1].padStart(5,"0");
-    let endDate = startDate;
-    if (endDateM) {
-      endDate = `${year}-${endDateM[2].padStart(2,"0")}-${endDateM[1].padStart(2,"0")}`;
-    } else if (endTime <= startTime) {
-      const d = new Date(startDate); d.setDate(d.getDate()+1);
-      endDate = d.toISOString().split("T")[0];
-    }
-
-    // Check for briefing time
-    const briefingMins = parseBriefingTime(roleBlock);
-    if (briefingMins > 0) {
-      const [h, m] = startTime.split(":").map(Number);
-      const totalMins = h * 60 + m - briefingMins;
-      const nh = Math.floor(((totalMins % 1440) + 1440) % 1440 / 60);
-      const nm = ((totalMins % 1440) + 1440) % 1440 % 60;
-      startTime = `${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}`;
-      // if briefing pushes to previous day
-      if (totalMins < 0) {
-        const d = new Date(startDate); d.setDate(d.getDate()-1);
-        // startDate stays as the shift date for matching purposes, we'll handle in event creation
-      }
-    }
-
-    const roleLines = roleBlock.split("\n").map(l=>l.trim())
-      .filter(l => l && !l.includes("נא לאשר") && !l.includes("היי") && l.length > 1);
-    const title = roleLines.slice(0,2).join(" · ") || "משמרת";
-
-    shifts.push({ title, date:startDate, startTime, endTime, endDate: endDate!==startDate?endDate:null, briefingMins });
+function parseShifts(text){
+  const year=new Date().getFullYear(), shifts=[], blocks=text.split(/\*/);
+  for(let i=1;i<blocks.length;i+=2){
+    const line=blocks[i].trim(), roleBlock=(blocks[i+1]||"").trim();
+    const sdm=line.match(/(\d{2})\.(\d{2})/), stm=line.match(/נתחיל ב(\d{1,2}:\d{2})/), etm=line.match(/נסיים ב(\d{1,2}:\d{2})/);
+    const edm=line.match(/נסיים ב\d{1,2}:\d{2}[^\d]*(\d{2})\.(\d{2})/);
+    if(!sdm||!stm||!etm) continue;
+    const date=`${year}-${sdm[2].padStart(2,"0")}-${sdm[1].padStart(2,"0")}`;
+    let startTime=stm[1].padStart(5,"0"); const endTime=etm[1].padStart(5,"0");
+    let endDate=date;
+    if(edm) endDate=`${year}-${edm[2].padStart(2,"0")}-${edm[1].padStart(2,"0")}`;
+    else if(endTime<=startTime){const d=new Date(date);d.setDate(d.getDate()+1);endDate=d.toISOString().split("T")[0];}
+    const bm=parseBriefingTime(roleBlock);
+    if(bm>0){const[h,m]=startTime.split(":").map(Number),t=h*60+m-bm,nh=Math.floor(((t%1440)+1440)%1440/60),nm=((t%1440)+1440)%1440%60;startTime=`${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}`;}
+    const rl=roleBlock.split("\n").map(l=>l.trim()).filter(l=>l&&!l.includes("נא לאשר")&&!l.includes("היי")&&l.length>1);
+    shifts.push({title:rl.slice(0,2).join(" · ")||"משמרת",date,startTime,endTime,endDate:endDate!==date?endDate:null,briefingMins:bm});
   }
   return shifts;
 }
 
-function detectMessageType(shifts) {
-  if (shifts.length === 0) return "plan";
-  // Collect all unique dates
-  const dates = new Set();
-  shifts.forEach(s => { dates.add(s.date); if(s.endDate) dates.add(s.endDate); });
-  const sorted = Array.from(dates).sort();
-  if (sorted.length <= 2) {
-    // Check if consecutive
-    if (sorted.length === 1) return "exec";
-    const d1 = new Date(sorted[0]);
-    const d2 = new Date(sorted[1]);
-    const diff = (d2 - d1) / (1000*60*60*24);
-    if (diff <= 1) return "exec";
-  }
+function detectType(shifts){
+  if(!shifts.length) return "plan";
+  const dates=[...new Set(shifts.flatMap(s=>[s.date,s.endDate].filter(Boolean)))].sort();
+  if(dates.length<=2){if(dates.length===1)return"exec";if((new Date(dates[1])-new Date(dates[0]))/(864e5)<=1)return"exec";}
   return "plan";
 }
 
-// ── Calendar API ───────────────────────────────────────
-function isShiftEvent(title) {
-  if (!title) return false;
-  return SHIFT_KEYWORDS.some(kw => title.includes(kw));
-}
-
-async function getEventsForDate(date) {
-  const t = await getToken();
-  const start = new Date(date + "T00:00:00+03:00").toISOString();
-  const end   = new Date(date + "T23:59:59+03:00").toISOString();
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(start)}&timeMax=${encodeURIComponent(end)}&singleEvents=true`;
-  const r = await fetch(url, { headers:{ Authorization:`Bearer ${t}` } });
-  if (!r.ok) return [];
-  const d = await r.json();
-  return d.items || [];
-}
-
-async function deleteEvent(eventId) {
-  const t = await getToken();
-  await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
-    method:"DELETE", headers:{ Authorization:`Bearer ${t}` }
+// ── Calendar ──
+async function addEvent(shift){
+  const t=await getToken();
+  const s=new Date(`${shift.date}T${shift.startTime}:00`).toISOString();
+  const e=new Date(`${shift.endDate||shift.date}T${shift.endTime}:00`).toISOString();
+  const r=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{
+    method:"POST",headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},
+    body:JSON.stringify({summary:shift.title,start:{dateTime:s,timeZone:"Asia/Jerusalem"},end:{dateTime:e,timeZone:"Asia/Jerusalem"},colorId:"7"})
   });
+  if(!r.ok) throw new Error(await r.text());
 }
 
-async function addEvent(shift) {
-  const t = await getToken();
-  const startDT = `${shift.date}T${shift.startTime}:00`;
-  const endDT   = `${shift.endDate||shift.date}T${shift.endTime}:00`;
-  const r = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-    method:"POST",
-    headers:{ Authorization:`Bearer ${t}`, "Content-Type":"application/json" },
-    body: JSON.stringify({
-      summary: shift.title,
-      start:{ dateTime:new Date(startDT).toISOString(), timeZone:"Asia/Jerusalem" },
-      end:{   dateTime:new Date(endDT).toISOString(),   timeZone:"Asia/Jerusalem" },
-      colorId:"7"
-    })
-  });
-  return r.ok;
+async function getEvents(date){
+  const t=await getToken();
+  const s=new Date(date+"T00:00:00+03:00").toISOString(),e=new Date(date+"T23:59:59+03:00").toISOString();
+  const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(s)}&timeMax=${encodeURIComponent(e)}&singleEvents=true`,{headers:{Authorization:`Bearer ${t}`}});
+  return (await r.json()).items||[];
 }
 
-async function processExec(shifts) {
-  // For each shift, find matching existing event and replace it
-  const results = [];
-  for (const shift of shifts) {
-    try {
-      // Get events on shift's date
-      const events = await getEventsForDate(shift.date);
-      // Find matching shift event (same date, keyword match, overlapping time)
-      const shiftStartMins = timeToMins(shift.startTime);
-      const shiftEndMins   = timeToMins(shift.endTime);
-
-      let deleted = 0;
-      for (const ev of events) {
-        if (!isShiftEvent(ev.summary)) continue;
-        // Check time overlap with the original shift time window (+/- 2 hours)
-        const evStart = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
-        if (!evStart) continue;
-        const evMins = evStart.getHours()*60 + evStart.getMinutes();
-        // Match if event starts within 2 hours of shift start (before briefing adjustment)
-        const originalStartMins = shiftStartMins + shift.briefingMins; // reverse briefing
-        if (Math.abs(evMins - originalStartMins) <= 120) {
-          await deleteEvent(ev.id);
-          deleted++;
-        }
-      }
-
-      const ok = await addEvent(shift);
-      results.push({ ...shift, status: ok ? (deleted>0?"upd":"ok") : "err" });
-    } catch(e) {
-      console.error(e);
-      results.push({ ...shift, status:"err" });
-    }
-  }
-  return results;
+async function delEvent(id){
+  const t=await getToken();
+  await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`,{method:"DELETE",headers:{Authorization:`Bearer ${t}`}});
 }
 
-async function processPlan(shifts) {
-  const results = [];
-  for (const s of shifts) {
-    try { const ok = await addEvent(s); results.push({...s, status:ok?"ok":"err"}); }
-    catch { results.push({...s, status:"err"}); }
-  }
-  return results;
+function tmins(t){const[h,m]=t.split(":").map(Number);return h*60+m;}
+
+// ── UI ──
+function fmtShift(date,eDate,s,e){
+  if(!date) return `${s} – ${e}`;
+  const o={day:"numeric",month:"numeric",weekday:"short"};
+  const d1=new Date(date).toLocaleDateString("he-IL",o);
+  if(eDate&&eDate!==date){const d2=new Date(eDate).toLocaleDateString("he-IL",o);return `${d1} ${s} ← ${d2} ${e}`;}
+  return `${d1} · ${s} – ${e}`;
 }
 
-function timeToMins(t) {
-  const [h,m] = t.split(":").map(Number); return h*60+m;
-}
+function fmtTime(d){return d.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});}
 
-// ── UI helpers ─────────────────────────────────────────
-function fmtShift(date, eDate, s, e) {
-  if (!date) return `${s} – ${e}`;
-  const o = {day:"numeric",month:"numeric",weekday:"short"};
-  const d1 = new Date(date).toLocaleDateString("he-IL",o);
-  if (eDate && eDate!==date) {
-    const d2 = new Date(eDate).toLocaleDateString("he-IL",o);
-    return `${d1} ${s}  ←  ${d2} ${e}`;
-  }
-  return `${d1}  ·  ${s} – ${e}`;
-}
-
-function fmtTime(d) { return d.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"}); }
-
-function addMsg(role, text, shifts, msgType) {
-  const msgs = document.getElementById("msgs");
-  const empty = msgs.querySelector(".empty");
-  if (empty) empty.remove();
-
-  const bbl = document.createElement("div");
-  bbl.className = `bbl ${role==="user"?"u":""}`;
-  const av = document.createElement("div");
-  av.className = "av";
-  av.textContent = role==="user"?"👤":"🤖";
-  const bc = document.createElement("div");
-  bc.className = "bc";
-
-  if (msgType) {
-    const badge = document.createElement("div");
-    badge.className = `msg-type ${msgType}`;
-    badge.textContent = msgType==="exec" ? "📋 הודעת ביצוע" : "📅 הודעת תכנון";
-    bc.appendChild(badge);
-  }
-
-  const bt = document.createElement("div");
-  bt.className = "bt";
-  bt.textContent = text;
-  bc.appendChild(bt);
-
-  if (shifts?.length) {
-    const wrap = document.createElement("div");
-    wrap.className = "sc-wrap";
-    const labels = { ok:"נוסף ✓", err:"נכשל", upd:"עודכן ✓", pre:"ללא חיבור" };
-    shifts.forEach(s => {
-      const sc = document.createElement("div");
-      sc.className = `sc ${s.status}`;
-      sc.innerHTML = `
-        <div class="sd"></div>
-        <div class="si">
-          <strong>${s.title}</strong>
-          <span>${fmtShift(s.date,s.endDate,s.startTime,s.endTime)}${s.briefingMins>0?" (כולל תדריך)":""}</span>
-        </div>
-        <span class="ss">${labels[s.status]||""}</span>`;
-      wrap.appendChild(sc);
+function addMsg(role,text,shifts,type){
+  const msgs=document.getElementById("msgs");
+  msgs.querySelector(".empty")?.remove();
+  const bbl=document.createElement("div"); bbl.className=`bbl ${role==="user"?"u":""}`;
+  const av=document.createElement("div"); av.className="av"; av.textContent=role==="user"?"👤":"🤖";
+  const bc=document.createElement("div"); bc.className="bc";
+  if(type){const b=document.createElement("div");b.className=`msg-type ${type}`;b.textContent=type==="exec"?"📋 הודעת ביצוע":"📅 הודעת תכנון";bc.appendChild(b);}
+  const bt=document.createElement("div"); bt.className="bt"; bt.textContent=text; bc.appendChild(bt);
+  if(shifts?.length){
+    const w=document.createElement("div"); w.className="sc-wrap";
+    const lb={ok:"נוסף ✓",err:"נכשל",upd:"עודכן ✓",pre:"ללא חיבור"};
+    shifts.forEach(s=>{
+      const sc=document.createElement("div"); sc.className=`sc ${s.status}`;
+      sc.innerHTML=`<div class="sd"></div><div class="si"><strong>${s.title}</strong><span>${fmtShift(s.date,s.endDate,s.startTime,s.endTime)}${s.briefingMins>0?" · תדריך":""}</span></div><span class="ss">${lb[s.status]||""}</span>`;
+      w.appendChild(sc);
     });
-    bc.appendChild(wrap);
+    bc.appendChild(w);
   }
-
-  const btm = document.createElement("div");
-  btm.className = "btm";
-  btm.textContent = fmtTime(new Date());
-  bc.appendChild(btm);
-  bbl.appendChild(av);
-  bbl.appendChild(bc);
-  msgs.appendChild(bbl);
-  msgs.scrollTop = msgs.scrollHeight;
+  const tm=document.createElement("div"); tm.className="btm"; tm.textContent=fmtTime(new Date()); bc.appendChild(tm);
+  bbl.appendChild(av); bbl.appendChild(bc); msgs.appendChild(bbl);
+  msgs.scrollTop=msgs.scrollHeight;
 }
 
-function showTyping() {
-  const msgs = document.getElementById("msgs");
-  const bbl = document.createElement("div");
-  bbl.className = "bbl"; bbl.id = "typing-bbl";
-  bbl.innerHTML = `<div class="av">🤖</div><div class="bc"><div class="bt"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
-  msgs.appendChild(bbl);
-  msgs.scrollTop = msgs.scrollHeight;
+function showTyping(){
+  const msgs=document.getElementById("msgs");
+  const b=document.createElement("div"); b.className="bbl"; b.id="typ";
+  b.innerHTML=`<div class="av">🤖</div><div class="bc"><div class="bt"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
+  msgs.appendChild(b); msgs.scrollTop=msgs.scrollHeight;
 }
-function hideTyping() { const t=document.getElementById("typing-bbl"); if(t) t.remove(); }
+function hideTyping(){document.getElementById("typ")?.remove();}
 
-// ── Send ───────────────────────────────────────────────
-let sending = false;
-async function send() {
-  const inp = document.getElementById("inp");
-  const text = inp.value.trim();
-  if (!text || sending) return;
-  sending = true;
-  document.getElementById("sendBtn").disabled = true;
-  addMsg("user", text);
-  inp.value = ""; inp.style.height = "auto";
+// ── Send ──
+let sending=false;
+async function send(){
+  const inp=document.getElementById("inp"), text=inp.value.trim();
+  if(!text||sending) return;
+  sending=true; document.getElementById("sendBtn").disabled=true;
+  addMsg("user",text); inp.value=""; inp.style.height="auto";
   showTyping();
-  try {
-    const shifts = parseShifts(text);
-    if (shifts.length === 0) {
-      hideTyping();
-      addMsg("assistant", "לא זיהיתי משמרות בהודעה. ודא שהפורמט כולל כוכביות *...*");
-      return;
+  try{
+    const shifts=parseShifts(text);
+    if(!shifts.length){hideTyping();addMsg("assistant","לא זיהיתי משמרות. ודא שהפורמט כולל כוכביות *...*");return;}
+    const type=detectType(shifts), results=[];
+    for(const s of shifts){
+      try{
+        if(type==="exec"){
+          const evs=await getEvents(s.date); let upd=0;
+          const orig=tmins(s.startTime)+s.briefingMins;
+          for(const ev of evs){
+            if(!SHIFT_KEYWORDS.some(k=>ev.summary?.includes(k))) continue;
+            const es=ev.start?.dateTime?new Date(ev.start.dateTime):null; if(!es) continue;
+            if(Math.abs(es.getHours()*60+es.getMinutes()-orig)<=120){await delEvent(ev.id);upd++;}
+          }
+          await addEvent(s); results.push({...s,status:upd>0?"upd":"ok"});
+        } else {
+          await addEvent(s); results.push({...s,status:"ok"});
+        }
+      } catch(e){results.push({...s,status:"err"});}
     }
-    const msgType = detectMessageType(shifts);
-    let results;
-    if (msgType === "exec") {
-      results = await processExec(shifts);
-      const updated = results.filter(r=>r.status==="upd").length;
-      const added   = results.filter(r=>r.status==="ok").length;
-      const parts = [];
-      if (updated > 0) parts.push(`עדכנתי ${updated} משמרות`);
-      if (added > 0)   parts.push(`הוספתי ${added} משמרות חדשות`);
-      hideTyping();
-      addMsg("assistant", parts.join(", ") + " ליומן.", results, "exec");
-    } else {
-      results = await processPlan(shifts);
-      hideTyping();
-      addMsg("assistant", `זיהיתי ${shifts.length} משמרות — הוספתי ליומן.`, results, "plan");
-    }
-  } catch(e) {
     hideTyping();
-    addMsg("assistant", "שגיאה: " + e.message);
-  } finally {
-    sending = false;
-    document.getElementById("sendBtn").disabled = false;
-  }
+    const upd=results.filter(r=>r.status==="upd").length, ok=results.filter(r=>r.status==="ok").length;
+    const parts=[]; if(upd>0)parts.push(`עדכנתי ${upd}`); if(ok>0)parts.push(`הוספתי ${ok}`);
+    addMsg("assistant",(parts.join(", ")||"הושלם")+" ביומן ✓",results,type);
+  } catch(e){hideTyping();addMsg("assistant","שגיאה: "+e.message);}
+  finally{sending=false;document.getElementById("sendBtn").disabled=false;}
 }
 </script>
 </body>

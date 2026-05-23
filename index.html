@@ -539,9 +539,12 @@ async function send(){
 
     // In exec mode: delete remaining shift events in the "shift day" window (06:00 to next 06:00)
     if(type==="exec"){
-      // Find the earliest date in the message
-      const sortedDates=[...new Set(shifts.map(s=>s.date))].sort();
-      const firstDate=sortedDates[0];
+      // Extract first DD.MM from raw text (before any night-shift date correction)
+      const rawDateMatch = text.match(/(\d{2})\.(\d{2})/);
+      const year2 = new Date().getFullYear();
+      const firstDate = rawDateMatch
+        ? `${year2}-${rawDateMatch[2].padStart(2,"0")}-${rawDateMatch[1].padStart(2,"0")}`
+        : shifts.map(s=>s.date).sort()[0];
       if(firstDate){
         // Window: 06:00 of firstDate → 06:00 of next day
         const windowStart=new Date(firstDate+"T06:00:00+03:00");

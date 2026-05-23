@@ -342,26 +342,59 @@ function parseBriefingTime(text){
 }
 
 function parseShifts(text){
-  const year=new Date().getFullYear(), shifts=[], blocks=text.split(/\*/);
-  for(let i=1;i<blocks.length;i+=2){
-    const line=blocks[i].trim(), roleBlock=(blocks[i+1]||"").trim();
-    const allDates=line.match(/(\d{2})\.(\d{2})/g)||[];
-    const stm=line.match(/נתחיל ב(\d{1,2}:\d{2})/), etm=line.match(/נסיים ב(\d{1,2}:\d{2})/);
-    const edm=line.match(/נסיים ב\d{1,2}:\d{2}[^\d]*(\d{2})\.(\d{2})/);
-    if(!allDates.length||!stm||!etm) continue;
-    // "בלילה שבין" → use second date as start date
+  const year=new Date().getFullYear(), shifts=[];
+
+  // Split text into shift blocks — each block starts with a time line
+  // Support both: *ביום...* format AND plain "ביום..." format
+  // Strategy: find all lines that contain "נתחיל ב" — those are shift time lines
+  const lines = text.split("\n");
+  let i = 0;
+  while(i < lines.length){
+    const line = lines[i].trim().replace(/\*/g,""); // strip asterisks
+
+    // Check if this line is a shift time line
+    const hasStart = line.includes("נתחיל ב");
+    const hasEnd   = line.includes("נסיים ב");
+    if(!hasStart || !hasEnd){ i++; continue; }
+
+    // Parse dates and times from this line
+    const allDates = line.match(/(\d{2})\.(\d{2})/g)||[];
+    const stm = line.match(/נתחיל ב(\d{1,2}:\d{2})/);
+    const etm = line.match(/נסיים ב(\d{1,2}:\d{2})/);
+    const edm = line.match(/נסיים ב\d{1,2}:\d{2}[^\d]*(\d{2})\.(\d{2})/);
+    if(!allDates.length || !stm || !etm){ i++; continue; }
+
     const isNight = line.includes("בלילה שבין");
     const sdRaw = isNight && allDates.length>=2 ? allDates[1] : allDates[0];
     const [sdDay,sdMonth] = sdRaw.split(".");
-    const date=`${year}-${sdMonth.padStart(2,"0")}-${sdDay.padStart(2,"0")}`;
-    let startTime=stm[1].padStart(5,"0"); const endTime=etm[1].padStart(5,"0");
-    let endDate=date;
-    if(edm) endDate=`${year}-${edm[2].padStart(2,"0")}-${edm[1].padStart(2,"0")}`;
+    const date = `${year}-${sdMonth.padStart(2,"0")}-${sdDay.padStart(2,"0")}`;
+    let startTime = stm[1].padStart(5,"0");
+    const endTime = etm[1].padStart(5,"0");
+    let endDate = date;
+    if(edm) endDate = `${year}-${edm[2].padStart(2,"0")}-${edm[1].padStart(2,"0")}`;
     else if(endTime<=startTime){const d=new Date(date);d.setDate(d.getDate()+1);endDate=d.toISOString().split("T")[0];}
-    const bm=parseBriefingTime(roleBlock);
-    if(bm>0){const[h,m]=startTime.split(":").map(Number),t=h*60+m-bm,nh=Math.floor(((t%1440)+1440)%1440/60),nm=((t%1440)+1440)%1440%60;startTime=`${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}`;}
-    const rl=roleBlock.split("\n").map(l=>l.trim()).filter(l=>l&&!l.includes("נא לאשר")&&!l.includes("היי")&&l.length>1);
-    shifts.push({title:rl.slice(0,2).join(" · ")||"משמרת",date,startTime,endTime,endDate:endDate!==date?endDate:null,briefingMins:bm});
+
+    // Collect role lines that follow (until next shift line or end)
+    i++;
+    const roleLines=[];
+    while(i<lines.length){
+      const rl=lines[i].trim().replace(/\*/g,"");
+      if(rl.includes("נתחיל ב")&&rl.includes("נסיים ב")) break; // next shift
+      if(rl&&!rl.includes("נא לאשר")&&!rl.includes("היי")&&rl.length>1&&!/^[📋📅✅🕐✈️⏰]+$/.test(rl)){
+        roleLines.push(rl);
+      }
+      i++;
+    }
+
+    const bm = parseBriefingTime(roleLines.join("\n"));
+    if(bm>0){
+      const[h,m]=startTime.split(":").map(Number),t=h*60+m-bm;
+      const nh=Math.floor(((t%1440)+1440)%1440/60),nm=((t%1440)+1440)%1440%60;
+      startTime=`${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}`;
+    }
+
+    const title = roleLines.slice(0,2).join(" · ") || "משמרת";
+    shifts.push({title,date,startTime,endTime,endDate:endDate!==date?endDate:null,briefingMins:bm});
   }
   return shifts;
 }

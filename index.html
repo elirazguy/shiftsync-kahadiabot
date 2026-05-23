@@ -536,6 +536,36 @@ async function send(){
         }
       } catch(e){results.push({...s,status:"err"});}
     }
+
+    // In exec mode: delete remaining shift events in the "shift day" window (06:00 to next 06:00)
+    if(type==="exec"){
+      // Find the earliest date in the message
+      const sortedDates=[...new Set(shifts.map(s=>s.date))].sort();
+      const firstDate=sortedDates[0];
+      if(firstDate){
+        // Window: 06:00 of firstDate → 06:00 of next day
+        const windowStart=new Date(firstDate+"T06:00:00+03:00");
+        const nextDay=new Date(firstDate); nextDay.setDate(nextDay.getDate()+1);
+        const windowEnd=new Date(nextDay.toISOString().split("T")[0]+"T06:00:00+03:00");
+
+        // Get events from both days in window
+        const evs1=await getEvents(firstDate);
+        const evs2=await getEvents(nextDay.toISOString().split("T")[0]);
+        const allEvs=[...evs1,...evs2];
+
+        for(const ev of allEvs){
+          if(!SHIFT_KEYWORDS.some(k=>ev.summary?.includes(k))) continue;
+          if(addedIds.includes(ev.id)) continue; // just added — keep
+          // Check if event starts within our window
+          const evStart=ev.start?.dateTime?new Date(ev.start.dateTime):null;
+          if(!evStart) continue;
+          if(evStart>=windowStart && evStart<windowEnd){
+            deletedEvents.push({summary:ev.summary,start:ev.start,end:ev.end,colorId:ev.colorId||"7"});
+            await delEvent(ev.id);
+          }
+        }
+      }
+    }
     hideTyping();
     const upd=results.filter(r=>r.status==="upd").length, ok=results.filter(r=>r.status==="ok").length;
     const parts=[]; if(upd>0)parts.push(`עדכנתי ${upd}`); if(ok>0)parts.push(`הוספתי ${ok}`);

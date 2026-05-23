@@ -345,10 +345,15 @@ function parseShifts(text){
   const year=new Date().getFullYear(), shifts=[], blocks=text.split(/\*/);
   for(let i=1;i<blocks.length;i+=2){
     const line=blocks[i].trim(), roleBlock=(blocks[i+1]||"").trim();
-    const sdm=line.match(/(\d{2})\.(\d{2})/), stm=line.match(/נתחיל ב(\d{1,2}:\d{2})/), etm=line.match(/נסיים ב(\d{1,2}:\d{2})/);
+    const allDates=line.match(/(\d{2})\.(\d{2})/g)||[];
+    const stm=line.match(/נתחיל ב(\d{1,2}:\d{2})/), etm=line.match(/נסיים ב(\d{1,2}:\d{2})/);
     const edm=line.match(/נסיים ב\d{1,2}:\d{2}[^\d]*(\d{2})\.(\d{2})/);
-    if(!sdm||!stm||!etm) continue;
-    const date=`${year}-${sdm[2].padStart(2,"0")}-${sdm[1].padStart(2,"0")}`;
+    if(!allDates.length||!stm||!etm) continue;
+    // "בלילה שבין" → use second date as start date
+    const isNight = line.includes("בלילה שבין");
+    const sdRaw = isNight && allDates.length>=2 ? allDates[1] : allDates[0];
+    const [sdDay,sdMonth] = sdRaw.split(".");
+    const date=`${year}-${sdMonth.padStart(2,"0")}-${sdDay.padStart(2,"0")}`;
     let startTime=stm[1].padStart(5,"0"); const endTime=etm[1].padStart(5,"0");
     let endDate=date;
     if(edm) endDate=`${year}-${edm[2].padStart(2,"0")}-${edm[1].padStart(2,"0")}`;

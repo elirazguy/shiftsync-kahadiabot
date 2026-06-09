@@ -186,6 +186,26 @@
   .sbtn:hover { opacity: .85; transform: scale(1.05); }
   .sbtn:disabled { opacity: .28; cursor: not-allowed; transform: none; }
 
+  /* ── Schedule events ── */
+  .sched-wrap { display:flex; flex-direction:column; gap:5px; margin-top:4px; }
+  .sched-ev {
+    background:#1a1a2e; border:1px solid var(--border);
+    border-radius:9px; padding:8px 11px;
+    display:flex; align-items:center; gap:8px; font-size:12px;
+  }
+  .sched-ev.added { border-color:rgba(79,255,176,.35); opacity:.6; }
+  .sched-info { flex:1; min-width:0; }
+  .sched-info strong { display:block; font-weight:600; color:#f0f0ff; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sched-info span { color:#a0a0c0; font-family:'Space Mono',monospace; font-size:10px; direction:ltr; display:block; text-align:right; }
+  .sched-add {
+    flex-shrink:0; padding:4px 10px; border-radius:14px;
+    border:1px solid rgba(124,107,255,.4); background:rgba(124,107,255,.1);
+    color:var(--accent); font-family:'Space Mono',monospace; font-size:10px;
+    cursor:pointer; transition:all .2s; white-space:nowrap;
+  }
+  .sched-add:hover { background:rgba(124,107,255,.25); }
+  .sched-add.done { border-color:rgba(79,255,176,.4); background:rgba(79,255,176,.1); color:var(--ok); cursor:default; }
+
   @media (max-width: 480px) {
     .logo-tx h1 { font-size: 17px; }
     .bt { font-size: 13px; }
@@ -477,7 +497,188 @@ function showTyping(){
 function hideTyping(){document.getElementById("typ")?.remove();}
 
 // ── Send ──
+// ── Schedule (לו"ז) parser ──────────────────────────
+function parseSchedule(text){
+  const year = new Date().getFullYear();
+  const events = [];
+
+  // Find date in header: DD/MM or DD.MM
+  const dateMatch = text.match(/(\d{1,2})[\/\.](\d{1,2})/);
+  const baseDate = dateMatch
+    ? `${year}-${dateMatch[2].padStart(2,"0")}-${dateMatch[1].padStart(2,"0")}`
+    : new Date().toISOString().split("T")[0];
+
+  // Find current section header (מפקד / סגן / יחידה / etc.)
+  let currentSection = "";
+
+  const lines = text.split("\n");
+  for(const line of lines){
+    const l = line.trim();
+
+    // Section header: line ending with : that has no times
+    if(l.endsWith(":") && !l.includes("-") || /לו["״]ז/.test(l)){
+      currentSection = l.replace(/לו["״]ז\s*/,"").replace(/:$/,"").trim();
+      continue;
+    }
+
+    // Event line: * HH:MM-HH:MM - title or HH:MM-HH:MM - title
+    const evMatch = l.match(/^\*?\s*(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/);
+    if(!evMatch) continue;
+
+    const startTime = evMatch[1].padStart(5,"0");
+    const endTime   = evMatch[2].padStart(5,"0");
+    let title       = evMatch[3].trim();
+    // Remove brackets like [פורום מפקדים]
+    title = title.replace(/\[.*?\]/g,"").trim();
+
+    let endDate = baseDate;
+    if(endTime < startTime){
+      const d = new Date(baseDate); d.setDate(d.getDate()+1);
+      endDate = d.toISOString().split("T")[0];
+    }
+
+    events.push({
+      title: currentSection ? `${title} | ${currentSection}` : title,
+      date: baseDate,
+      startTime,
+      endTime,
+      endDate: endDate !== baseDate ? endDate : null,
+      section: currentSection
+    });
+  }
+  return events;
+}
+
+function isScheduleMessage(text){
+  return /לו["״]ז/.test(text) && /\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/.test(text);
+}
+
+async function addScheduleEvent(ev){
+  const t = await getToken();
+  const s = new Date(`${ev.date}T${ev.startTime}:00`).toISOString();
+  const e = new Date(`${ev.endDate||ev.date}T${ev.endTime}:00`).toISOString();
+  const r = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{
+    method:"POST",
+    headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},
+    body:JSON.stringify({
+      summary: ev.title,
+      start:{dateTime:s, timeZone:"Asia/Jerusalem"},
+      end:{dateTime:e,   timeZone:"Asia/Jerusalem"},
+      colorId:"9"
+    })
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+
+function renderSchedule(events){
+  const msgs = document.getElementById("msgs");
+  msgs.querySelector(".empty")?.remove();
+
+  const bbl = document.createElement("div"); bbl.className="bbl";
+  const av  = document.createElement("div"); av.className="av"; av.textContent="🤖";
+  const bc  = document.createElement("div"); bc.className="bc";
+
+  const badge = document.createElement("div");
+  badge.className="msg-type plan"; badge.textContent="🗓️ הודעת לו"ז";
+  bc.appendChild(badge);
+
+  const bt = document.createElement("div"); bt.className="bt";
+  bt.textContent=`זיהיתי ${events.length} אירועים — בחר אילו להוסיף:`;
+  bc.appendChild(bt);
+
+  const wrap = document.createElement("div"); wrap.className="sched-wrap";
+
+  events.forEach((ev,i)=>{
+    const row = document.createElement("div"); row.className="sched-ev";
+
+    const info = document.createElement("div"); info.className="sched-info";
+    const strong = document.createElement("strong"); strong.textContent=ev.title;
+    const span   = document.createElement("span");
+    const d = new Date(ev.date).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"});
+    span.textContent = `${d} · ${ev.startTime} – ${ev.endTime}`;
+    span.setAttribute("dir","ltr");
+    info.appendChild(strong); info.appendChild(span);
+
+    const btn = document.createElement("button"); btn.className="sched-add";
+    btn.textContent="+ הוסף";
+    btn.onclick = async()=>{
+      if(btn.classList.contains("done")) return;
+      btn.textContent="..."; btn.disabled=true;
+      try{
+        await addScheduleEvent(ev);
+        btn.textContent="✓ נוסף"; btn.classList.add("done");
+        row.classList.add("added");
+      }catch(e){
+        btn.textContent="שגיאה"; btn.disabled=false;
+        console.error(e);
+      }
+    };
+
+    row.appendChild(info); row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+
+  bc.appendChild(wrap);
+
+  const tm=document.createElement("div"); tm.className="btm";
+  tm.textContent=fmtTime(new Date()); bc.appendChild(tm);
+
+  bbl.appendChild(av); bbl.appendChild(bc);
+  msgs.appendChild(bbl);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
 let sending=false, lastAction=null;
+
+function generateICS(shifts){
+  const pad=n=>String(n).padStart(2,"0");
+  function toICSDate(dateStr, timeStr){
+    const [y,m,d]=dateStr.split("-");
+    const [h,min]=timeStr.split(":");
+    // Convert from Asia/Jerusalem (UTC+3) to UTC
+    const dt=new Date(`${dateStr}T${timeStr}:00+03:00`);
+    return `${dt.getUTCFullYear()}${pad(dt.getUTCMonth()+1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}00Z`;
+  }
+  const now=new Date();
+  const stamp=`${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+  let ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ShiftSync//IL\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n";
+  shifts.forEach((s,idx)=>{
+    const uid=`shiftsync-${Date.now()}-${idx}@shiftsync`;
+    const dtstart=toICSDate(s.date, s.startTime);
+    const dtend=toICSDate(s.endDate||s.date, s.endTime);
+    ics+=`BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:${stamp}\r\nDTSTART:${dtstart}\r\nDTEND:${dtend}\r\nSUMMARY:${s.title}\r\nEND:VEVENT\r\n`;
+  });
+  ics+="END:VCALENDAR";
+  return ics;
+}
+
+function downloadICS(shifts){
+  const ics=generateICS(shifts);
+  const blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download="משמרות.ics"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function addICSBtn(shifts){
+  const msgs=document.getElementById("msgs");
+  const lastBc=msgs.querySelectorAll(".bbl:not(.u) .bc");
+  if(!lastBc.length) return;
+  const bc=lastBc[lastBc.length-1];
+  const btn=document.createElement("button");
+  btn.textContent="📥 הורדת קובץ לאאוטלוק";
+  btn.style.cssText="background:rgba(79,255,176,.1);border:1px solid rgba(79,255,176,.3);color:#4fffb0;font-family:'Space Mono',monospace;font-size:11px;padding:6px 14px;border-radius:20px;cursor:pointer;display:inline-block;margin-top:2px;transition:all .2s;";
+  btn.onmouseover=()=>btn.style.background="rgba(79,255,176,.2)";
+  btn.onmouseout=()=>btn.style.background="rgba(79,255,176,.1)";
+  btn.onclick=()=>downloadICS(shifts);
+  // Insert after undo button or before sc-wrap
+  const undoBtn=bc.querySelector("#undo-btn");
+  const scWrap=bc.querySelector(".sc-wrap");
+  if(undoBtn) undoBtn.after(btn);
+  else if(scWrap) bc.insertBefore(btn,scWrap);
+  else bc.appendChild(btn);
+}
 
 function addUndoBtn(){
   document.getElementById("undo-btn")?.remove();
@@ -543,6 +744,18 @@ async function send(){
   addMsg("user",text); inp.value=""; inp.style.height="auto";
   showTyping();
   try{
+    // Check if this is a schedule (לו"ז) message
+    if(isScheduleMessage(text)){
+      const schedEvents = parseSchedule(text);
+      hideTyping();
+      if(!schedEvents.length){
+        addMsg("assistant","לא זיהיתי אירועים בהודעת הלו"ז.");
+      } else {
+        renderSchedule(schedEvents);
+      }
+      return;
+    }
+
     const shifts=parseShifts(text);
     if(!shifts.length){hideTyping();addMsg("assistant","לא זיהיתי משמרות. ודא שהפורמט כולל כוכביות *...*");return;}
     const type=detectType(shifts), results=[], addedIds=[], deletedEvents=[];
@@ -608,6 +821,7 @@ async function send(){
     lastAction={ids:addedIds, deleted:deletedEvents, type};
     addMsg("assistant",(parts.join(", ")||"הושלם")+" ביומן ✓",results,type);
     if(addedIds.length>0) addUndoBtn();
+    if(results.length>0 && type==="plan") addICSBtn(results);
   } catch(e){hideTyping();addMsg("assistant","שגיאה: "+e.message);}
   finally{sending=false;document.getElementById("sendBtn").disabled=false;}
 }

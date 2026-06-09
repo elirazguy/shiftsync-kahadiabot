@@ -521,22 +521,19 @@ function parseSchedule(text){
       continue;
     }
 
-    // Event line: supports *, •, ■, zero-width chars, etc.
-    // Remove bullet chars and invisible chars
-    const cleaned = l.replace(/^[•\*■◆▪\u200B\u2060\uFEFF\u00A0]+\s*/,"").trim();
-    const evMatch = cleaned.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/) ||
-                    cleaned.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/); // no end time
+    // Strip leading bullets/whitespace/invisible chars
+    const cleaned = l.replace(/^[^\u05d0-\u05ea0-9]+/, "").trim();
+    const rng = /^(\d{1,2}:\d{2})\s*[-\u2013]\s*(\d{1,2}:\d{2})\s*[-\u2013]\s*(.+)$/;
+    const rng2 = /^(\d{1,2}:\d{2})\s*[-\u2013]\s*(.+)$/;
+    let evMatch = cleaned.match(rng) || cleaned.match(rng2);
     if(!evMatch) continue;
-    // Handle case with no end time — default 30 min
     if(evMatch.length === 3){
-      const [,st,ttl] = evMatch;
-      const [h,m] = st.split(":").map(Number);
-      const em = (m+30)%60, eh = h + Math.floor((m+30)/60);
-      evMatch[2] = `${String(eh).padStart(2,"0")}:${String(em).padStart(2,"0")}`;
-      evMatch[3] = ttl;
+      const st=evMatch[1], ttl=evMatch[2];
+      const [h,m]=st.split(":").map(Number);
+      const em=(m+30)%60, eh=h+Math.floor((m+30)/60);
+      evMatch=[evMatch[0],st,String(eh).padStart(2,"0")+":"+String(em).padStart(2,"0"),ttl];
     }
-
-    const startTime = evMatch[1].padStart(5,"0");
+        const startTime = evMatch[1].padStart(5,"0");
     const endTime   = evMatch[2].padStart(5,"0");
     let title       = (evMatch[3]||"").trim();
     // Remove brackets like [פורום מפקדים] and invisible chars
@@ -590,7 +587,7 @@ function renderSchedule(events){
   const bc  = document.createElement("div"); bc.className="bc";
 
   const badge = document.createElement("div");
-  badge.className="msg-type plan"; badge.textContent="🗓️ הודעת לו"ז";
+  badge.className="msg-type plan"; badge.textContent="🗓️ הודעת לו״ז";
   bc.appendChild(badge);
 
   const bt = document.createElement("div"); bt.className="bt";
@@ -760,7 +757,7 @@ async function send(){
       const schedEvents = parseSchedule(text);
       hideTyping();
       if(!schedEvents.length){
-        addMsg("assistant","לא זיהיתי אירועים בהודעת הלו"ז.");
+        addMsg("assistant","לא זיהיתי אירועים בהודעת הלו״ז.");
       } else {
         renderSchedule(schedEvents);
       }

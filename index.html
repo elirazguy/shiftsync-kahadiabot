@@ -521,15 +521,26 @@ function parseSchedule(text){
       continue;
     }
 
-    // Event line: * HH:MM-HH:MM - title or HH:MM-HH:MM - title
-    const evMatch = l.match(/^\*?\s*(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/);
+    // Event line: supports *, •, ■, zero-width chars, etc.
+    // Remove bullet chars and invisible chars
+    const cleaned = l.replace(/^[•\*■◆▪\u200B\u2060\uFEFF\u00A0]+\s*/,"").trim();
+    const evMatch = cleaned.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/) ||
+                    cleaned.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(.+)$/); // no end time
     if(!evMatch) continue;
+    // Handle case with no end time — default 30 min
+    if(evMatch.length === 3){
+      const [,st,ttl] = evMatch;
+      const [h,m] = st.split(":").map(Number);
+      const em = (m+30)%60, eh = h + Math.floor((m+30)/60);
+      evMatch[2] = `${String(eh).padStart(2,"0")}:${String(em).padStart(2,"0")}`;
+      evMatch[3] = ttl;
+    }
 
     const startTime = evMatch[1].padStart(5,"0");
     const endTime   = evMatch[2].padStart(5,"0");
-    let title       = evMatch[3].trim();
-    // Remove brackets like [פורום מפקדים]
-    title = title.replace(/\[.*?\]/g,"").trim();
+    let title       = (evMatch[3]||"").trim();
+    // Remove brackets like [פורום מפקדים] and invisible chars
+    title = title.replace(/\[.*?\]/g,"").replace(/[\u200B\u2060\uFEFF]/g,"").trim();
 
     let endDate = baseDate;
     if(endTime < startTime){

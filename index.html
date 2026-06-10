@@ -186,17 +186,6 @@
   .sbtn:hover { opacity: .85; transform: scale(1.05); }
   .sbtn:disabled { opacity: .28; cursor: not-allowed; transform: none; }
 
-  /* ── Camera button ── */
-  .cam-btn {
-    width: 36px; height: 36px; flex-shrink: 0;
-    border-radius: 9px; border: 1px solid var(--border);
-    background: var(--s2); color: var(--muted);
-    font-size: 17px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all .2s;
-  }
-  .cam-btn:hover { border-color: var(--accent); color: var(--accent); }
-
   /* ── Schedule events ── */
   .sched-wrap { display:flex; flex-direction:column; gap:5px; margin-top:4px; }
   .sched-ev {
@@ -273,15 +262,12 @@
         placeholder="הדבק הודעת שיבוץ כאן..."
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"
         oninput="autoResize(this)"></textarea>
-      <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none" onchange="handleImage(this)">
-      <button class="cam-btn" onclick="document.getElementById('camInput').click()" title="צלם לו״ז">📷</button>
       <button class="sbtn" id="sendBtn" onclick="send()" disabled>↑</button>
     </div>
   </div>
 </div>
 
 <script>
-const VISION_API_KEY = "AIzaSyCFaCBadC60uhuU1JHqAnMfjr-Sg5VaqI0";
 const CLIENT_ID     = "710776319176-osg4gjeldsjb2n8e52o46p3h112778a2.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
 const REDIRECT_URI  = "https://elirazguy.github.io/shiftsync-kahadiabot/";
@@ -645,167 +631,6 @@ function renderSchedule(events){
   const tm=document.createElement("div"); tm.className="btm";
   tm.textContent=fmtTime(new Date()); bc.appendChild(tm);
 
-  bbl.appendChild(av); bbl.appendChild(bc);
-  msgs.appendChild(bbl);
-  msgs.scrollTop=msgs.scrollHeight;
-}
-
-// ── Vision OCR ──────────────────────────────────────
-async function ocrImage(base64){
-  const r = await fetch(
-    `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
-    {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        requests:[{
-          image:{content: base64},
-          features:[{type:"TEXT_DETECTION"}]
-        }]
-      })
-    }
-  );
-  const d = await r.json();
-  return d.responses?.[0]?.fullTextAnnotation?.text || "";
-}
-
-async function handleImage(input){
-  const file = input.files[0];
-  if(!file) return;
-  input.value = "";
-
-  // Convert to base64
-  const base64 = await new Promise((res,rej)=>{
-    const reader = new FileReader();
-    reader.onload = e => res(e.target.result.split(",")[1]);
-    reader.onerror = rej;
-    reader.readAsDataURL(file);
-  });
-
-  // Show user message with image preview
-  const msgs = document.getElementById("msgs");
-  msgs.querySelector(".empty")?.remove();
-  const bbl = document.createElement("div"); bbl.className="bbl u";
-  const av = document.createElement("div"); av.className="av"; av.textContent="👤";
-  const bc = document.createElement("div"); bc.className="bc";
-  const img = document.createElement("img");
-  img.src = "data:image/jpeg;base64,"+base64;
-  img.style.cssText = "max-width:200px;border-radius:10px;margin-bottom:4px;";
-  const bt = document.createElement("div"); bt.className="bt"; bt.textContent="📷 צילום לו״ז";
-  bc.appendChild(img); bc.appendChild(bt);
-  bbl.appendChild(av); bbl.appendChild(bc);
-  msgs.appendChild(bbl);
-  msgs.scrollTop = msgs.scrollHeight;
-
-  showTyping();
-
-  try {
-    // OCR
-    const text = await ocrImage(base64);
-    if(!text){ hideTyping(); addMsg("assistant","לא הצלחתי לקרוא טקסט מהתמונה."); return; }
-
-    // Parse schedule
-    const events = parseSchedule(text);
-    if(!events.length){ hideTyping(); addMsg("assistant","לא זיהיתי לו״ז בתמונה."); return; }
-
-    // Get existing calendar events for that day
-    const t = await getToken();
-    const calDate = events[0].date;
-    const existing = await getEvents(calDate);
-
-    // Compare — check which events overlap with existing
-    const newEvents = [];
-    const existingEvents = [];
-
-    for(const ev of events){
-      const evStartMins = timeToMins(ev.startTime);
-      const evEndMins   = timeToMins(ev.endTime);
-      const clash = existing.some(cal => {
-        if(!cal.start?.dateTime) return false;
-        const cs = new Date(cal.start.dateTime);
-        const ce = new Date(cal.end?.dateTime||cal.start.dateTime);
-        const csm = cs.getHours()*60+cs.getMinutes();
-        const cem = ce.getHours()*60+ce.getMinutes();
-        return evStartMins < cem && evEndMins > csm;
-      });
-      if(clash) existingEvents.push(ev);
-      else newEvents.push(ev);
-    }
-
-    hideTyping();
-    renderImageSchedule(events, existingEvents.map(e=>e.title));
-
-  } catch(e){
-    hideTyping();
-    addMsg("assistant","שגיאה: "+e.message);
-    console.error(e);
-  }
-}
-
-function renderImageSchedule(events, existingTitles){
-  const msgs = document.getElementById("msgs");
-  const bbl = document.createElement("div"); bbl.className="bbl";
-  const av  = document.createElement("div"); av.className="av"; av.textContent="🤖";
-  const bc  = document.createElement("div"); bc.className="bc";
-
-  const badge = document.createElement("div");
-  badge.className="msg-type plan";
-  badge.textContent="📷 לו״ז מתמונה";
-  bc.appendChild(badge);
-
-  const existing = events.filter(e=>existingTitles.includes(e.title));
-  const missing  = events.filter(e=>!existingTitles.includes(e.title));
-
-  const bt = document.createElement("div"); bt.className="bt";
-  bt.textContent=`זיהיתי ${events.length} אירועים — ${missing.length} חסרים ביומן, ${existing.length} כבר קיימים.`;
-  bc.appendChild(bt);
-
-  const wrap = document.createElement("div"); wrap.className="sched-wrap";
-
-  // Missing events — with add button
-  missing.forEach((ev,i)=>{
-    const row = document.createElement("div"); row.className="sched-ev";
-    const info = document.createElement("div"); info.className="sched-info";
-    const strong = document.createElement("strong"); strong.textContent=ev.title;
-    const span = document.createElement("span");
-    const d = new Date(ev.date).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"});
-    span.textContent=`${d} · ${ev.startTime} – ${ev.endTime}`;
-    span.setAttribute("dir","ltr");
-    info.appendChild(strong); info.appendChild(span);
-
-    const btn = document.createElement("button"); btn.className="sched-add";
-    btn.textContent="+ הוסף";
-    btn.onclick = async()=>{
-      if(btn.classList.contains("done")) return;
-      btn.textContent="..."; btn.disabled=true;
-      try{
-        await addScheduleEvent(ev);
-        btn.textContent="✓ נוסף"; btn.classList.add("done");
-        row.classList.add("added");
-      }catch(e){ btn.textContent="שגיאה"; btn.disabled=false; }
-    };
-    row.appendChild(info); row.appendChild(btn);
-    wrap.appendChild(row);
-  });
-
-  // Existing events — shown greyed out
-  existing.forEach(ev=>{
-    const row = document.createElement("div"); row.className="sched-ev added";
-    const info = document.createElement("div"); info.className="sched-info";
-    const strong = document.createElement("strong"); strong.textContent=ev.title;
-    const span = document.createElement("span");
-    const d = new Date(ev.date).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"});
-    span.textContent=`${d} · ${ev.startTime} – ${ev.endTime}`;
-    span.setAttribute("dir","ltr");
-    info.appendChild(strong); info.appendChild(span);
-    const lbl = document.createElement("span"); lbl.className="ss ok"; lbl.textContent="✓ קיים";
-    row.appendChild(info); row.appendChild(lbl);
-    wrap.appendChild(row);
-  });
-
-  bc.appendChild(wrap);
-  const tm=document.createElement("div"); tm.className="btm"; tm.textContent=fmtTime(new Date());
-  bc.appendChild(tm);
   bbl.appendChild(av); bbl.appendChild(bc);
   msgs.appendChild(bbl);
   msgs.scrollTop=msgs.scrollHeight;

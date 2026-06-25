@@ -636,6 +636,88 @@ function renderSchedule(events){
   msgs.scrollTop=msgs.scrollHeight;
 }
 
+// ── Free text parser ──────────────────────────────
+const DAY_NAMES = {
+  "ראשון":0,"שני":1,"שלישי":2,"רביעי":3,"חמישי":4,"שישי":5,"שבת":6
+};
+
+function parseTimeRange(text){
+  // Patterns: 6-10, 06-10, 6:00-10:00, 14-18, 22-02
+  const m = text.match(/(\d{1,2})(?::00)?\s*[-–]\s*(\d{1,2})(?::00)?/);
+  if(!m) return null;
+  let h1 = parseInt(m[1]), h2 = parseInt(m[2]);
+  const start = String(h1).padStart(2,"0") + ":00";
+  const end   = String(h2).padStart(2,"0") + ":00";
+  // overnight: end <= start means next day (e.g. 22-02, 2-6)
+  const overnight = h2 <= h1 || h2 === 6 && h1 <= 6 && h1 >= 2;
+  return {start, end, overnight};
+}
+
+function getNextWeekday(dayIndex, nextWeek){
+  // dayIndex: 0=Sun,1=Mon,...,6=Sat
+  const today = new Date();
+  const todayDay = today.getDay(); // 0=Sun
+  let diff = dayIndex - todayDay;
+  if(nextWeek) diff += 7;
+  else if(diff <= 0) diff += 7;
+  const d = new Date(today);
+  d.setDate(today.getDate() + diff);
+  return d.toISOString().split("T")[0];
+}
+
+function parseFreeText(text){
+  // Check for time range
+  const timeRange = parseTimeRange(text);
+  if(!timeRange) return null;
+
+  // Check for day name
+  let dayIndex = -1;
+  let nextWeek = false;
+
+  for(const [name, idx] of Object.entries(DAY_NAMES)){
+    if(text.includes(name)){ dayIndex = idx; break; }
+  }
+  if(dayIndex === -1) return null;
+
+  // Check for "שבוע הבא"
+  if(text.includes("שבוע הבא")) nextWeek = true;
+
+  // Get date
+  const date = getNextWeekday(dayIndex, nextWeek);
+  let endDate = date;
+  if(timeRange.overnight){
+    const d = new Date(date); d.setDate(d.getDate()+1);
+    endDate = d.toISOString().split("T")[0];
+  }
+
+  // Title: everything before the time range, cleaned up
+  let title = text
+    .replace(/(\d{1,2})(?::00)?\s*[-–]\s*(\d{1,2})(?::00)?/, "")
+    .replace(/שבוע הבא/, "")
+    .replace(/ביום/, "")
+    .replace(new RegExp(Object.keys(DAY_NAMES).join("|")), "")
+    .replace(/\s+/g, " ").trim();
+  if(!title) title = "אירוע";
+
+  return {
+    title,
+    date,
+    startTime: timeRange.start,
+    endTime: timeRange.end,
+    endDate: endDate !== date ? endDate : null,
+    briefingMins: 0
+  };
+}
+
+function isFreeText(text){
+  // Has time range but NOT a shift message (no נתחיל/נסיים) and NOT a schedule
+  const hasTime = /\d{1,2}\s*[-–]\s*\d{1,2}/.test(text);
+  const isShift = text.includes("נתחיל") || text.includes("נסיים");
+  const isSched = /לו["״ז]/.test(text);
+  const hasDay  = Object.keys(DAY_NAMES).some(d => text.includes(d));
+  return hasTime && !isShift && !isSched && hasDay;
+}
+
 let sending=false, lastAction=null;
 
 function generateICS(shifts){
@@ -752,6 +834,32 @@ async function send(){
   addMsg("user",text); inp.value=""; inp.style.height="auto";
   showTyping();
   try{
+    // Check for free text event
+    if(isFreeText(text)){
+      const ev = parseFreeText(text);
+      if(ev){
+        showTyping();
+        try{
+          const newId = await addEvent(ev);
+          const addedIds2 = newId ? [newId] : [];
+          lastAction = {ids: addedIds2, deleted: [], type: "plan"};
+          hideTyping();
+          const d = new Date(ev.date).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"long"});
+          addMsg("assistant",
+            `✅ נוסף ביומן:
+${ev.title}
+${d} · ${ev.startTime}–${ev.endTime}`,
+            [{...ev, status:"ok"}], "plan"
+          );
+          if(addedIds2.length) addUndoBtn();
+        }catch(e){
+          hideTyping();
+          addMsg("assistant","שגיאה: "+e.message);
+        }
+        return;
+      }
+    }
+
     // Check if this is a schedule (לו"ז) message
     if(isScheduleMessage(text)){
       const schedEvents = parseSchedule(text);

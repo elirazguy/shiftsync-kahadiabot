@@ -653,6 +653,14 @@ function parseTimeRange(text){
   return {start, end, overnight};
 }
 
+function localDateStr(d){
+  // Build YYYY-MM-DD from LOCAL date parts — avoids UTC shift after midnight
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+
 function getNextWeekday(dayIndex, nextWeek){
   // dayIndex: 0=Sun,1=Mon,...,6=Sat
   const today = new Date();
@@ -662,7 +670,7 @@ function getNextWeekday(dayIndex, nextWeek){
   else if(diff <= 0) diff += 7;
   const d = new Date(today);
   d.setDate(today.getDate() + diff);
-  return d.toISOString().split("T")[0];
+  return localDateStr(d);
 }
 
 // מילון מיפוי כותרות — מילה שמופיעה בטקסט → הכותרת שתיכנס ליומן
@@ -700,8 +708,8 @@ function parseFreeText(text){
   const date = getNextWeekday(dayIndex, nextWeek);
   let endDate = date;
   if(timeRange.overnight){
-    const d = new Date(date); d.setDate(d.getDate()+1);
-    endDate = d.toISOString().split("T")[0];
+    const d = new Date(date+"T12:00:00"); d.setDate(d.getDate()+1);
+    endDate = localDateStr(d);
   }
 
   // Title: clean up the text, then map to canonical titles

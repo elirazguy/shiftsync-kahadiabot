@@ -665,6 +665,20 @@ function getNextWeekday(dayIndex, nextWeek){
   return d.toISOString().split("T")[0];
 }
 
+// מילון מיפוי כותרות — מילה שמופיעה בטקסט → הכותרת שתיכנס ליומן
+const TITLE_MAP = [
+  { match: ["טיסה","טיסת","טייסת","לטוס"], title: "מוקד" },
+];
+
+function mapTitle(text){
+  for(const entry of TITLE_MAP){
+    for(const word of entry.match){
+      if(text.includes(word)) return entry.title;
+    }
+  }
+  return text; // no mapping — keep cleaned text as-is
+}
+
 function parseFreeText(text){
   // Check for time range
   const timeRange = parseTimeRange(text);
@@ -690,13 +704,20 @@ function parseFreeText(text){
     endDate = d.toISOString().split("T")[0];
   }
 
-  // Title: everything before the time range, cleaned up
+  // Title: clean up the text, then map to canonical titles
   let title = text
     .replace(/(\d{1,2})(?::00)?\s*[-–]\s*(\d{1,2})(?::00)?/, "")
-    .replace(/שבוע הבא/, "")
-    .replace(/ביום/, "")
-    .replace(new RegExp(Object.keys(DAY_NAMES).join("|")), "")
+    .replace(/שבוע הבא/g, "")
+    .replace(/השבוע/g, "")
+    .replace(/ביום/g, "")
+    .replace(/יום/g, "")
+    .replace(new RegExp(Object.keys(DAY_NAMES).join("|"), "g"), "")
+    // remove opening filler words
+    .replace(/תוסיף לי|תוסיף|תכניס לי|תכניס|תרשום לי|תרשום|הוסף לי|הוסף|תוכל להוסיף|בבקשה|לי/g, "")
+    .replace(/הבא|הקרוב/g, "")
     .replace(/\s+/g, " ").trim();
+
+  title = mapTitle(title);
   if(!title) title = "אירוע";
 
   return {
